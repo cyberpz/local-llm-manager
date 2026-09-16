@@ -44,14 +44,6 @@ MODEL_CATALOG = {
         "cuda": ["CUDA0"],
         "ctx": None,
     },
-    "qwen3.8-27b-humanlike": {
-        "file": "Qwen3.8-27B-Humanlike-Chat-Q3_K_M.gguf",
-        "path": "D:\\Models\\Qwen3.8-27B-Humanlike-Chat-Q3_K_M.gguf",
-        "alias": "Qwen 3.8 Humanlike",
-        "label": "Qwen 3.8 Humanlike — Chat naturale",
-        "cuda": ["CUDA0", "CUDA1"],
-        "ctx": 32768,
-    },
 }
 
 LLAMA_SERVER = "C:\\Users\\Peppuz\\llama-server.exe"
