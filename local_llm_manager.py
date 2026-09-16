@@ -5,7 +5,7 @@ Renames: GiorgioModelManager → Local-LLM-Manager
 import http.server, json, subprocess, time, threading, os, urllib.request, socket, sys
 from datetime import datetime
 
-# Multiple model roots: user home + D:/Models
+# Model roots for search fallback
 MODEL_ROOTS = [
     "C:\\Users\\Peppuz",
     "D:\\Models",
@@ -13,28 +13,32 @@ MODEL_ROOTS = [
 
 MODEL_CATALOG = {
     "nemotron-cascade-2-30b-a3b": {
-        "file": "nemotron-cascade-2-30b-a3b-Q3_K_M.gguf",
+        "file": "nvidia_Nemotron-Cascade-2-30B-A3B-Q4_0.gguf",
+        "path": "C:\\Users\\Peppuz\\.lmstudio\\models\\bartowski\\nvidia_Nemotron-Cascade-2-30B-A3B-GGUF\\nvidia_Nemotron-Cascade-2-30B-A3B-Q4_0.gguf",
         "alias": "Nemotron Cascade 2",
         "label": "Nemotron Cascade 2 — Qualità",
         "cuda": ["CUDA0", "CUDA1"],
         "ctx": 32768,
     },
     "qwen3.5-35b-a3b": {
-        "file": "qwen3.5-35b-a3b-Q6_K.gguf",
+        "file": "Qwen3.5-35B-A3B-Q4_K_M.gguf",
+        "path": "C:\\Users\\Peppuz\\.lmstudio\\models\\unsloth\\Qwen3.5-35B-A3B-GGUF\\Qwen3.5-35B-A3B-Q4_K_M.gguf",
         "alias": "Qwen 3.5",
         "label": "Qwen 3.5 — Ragionamento",
         "cuda": ["CUDA0", "CUDA1"],
         "ctx": 65536,
     },
     "mellum2-12b-a2.5b": {
-        "file": "mellum2-12b-a2.5b-Q8_0.gguf",
+        "file": "Mellum2-12B-A2.5B-Thinking-Q4_K_M.gguf",
+        "path": "C:\\Users\\Peppuz\\.lmstudio\\models\\JetBrains\\Mellum2-12B-A2.5B-Thinking-GGUF-Q4_K_M\\Mellum2-12B-A2.5B-Thinking-Q4_K_M.gguf",
         "alias": "Mellum 2",
         "label": "Mellum 2 — Codice e velocità",
         "cuda": ["CUDA0"],
         "ctx": 131072,
     },
     "gemma-4-e4b": {
-        "file": "gemma-4-e4b-Q8_0.gguf",
+        "file": "Gemma-4-E4B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf",
+        "path": "C:\\Users\\Peppuz\\.lmstudio\\models\\HauhauCS\\Gemma-4-E4B-Uncensored-HauhauCS-Aggressive\\Gemma-4-E4B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf",
         "alias": "Gemma 4 E4B",
         "label": "Gemma 4 E4B — Leggero",
         "cuda": ["CUDA0"],
@@ -42,6 +46,7 @@ MODEL_CATALOG = {
     },
     "qwen3.8-27b-humanlike": {
         "file": "Qwen3.8-27B-Humanlike-Chat-Q3_K_M.gguf",
+        "path": "D:\\Models\\Qwen3.8-27B-Humanlike-Chat-Q3_K_M.gguf",
         "alias": "Qwen 3.8 Humanlike",
         "label": "Qwen 3.8 Humanlike — Chat naturale",
         "cuda": ["CUDA0", "CUDA1"],
@@ -104,10 +109,14 @@ def save_state():
 
 
 def find_model_file(model_id):
-    """Search for model file across all MODEL_ROOTS."""
+    """Return model file path. Uses explicit 'path' if set, else searches MODEL_ROOTS."""
     spec = MODEL_CATALOG.get(model_id)
     if not spec:
         return None
+    # Prefer explicit path
+    if "path" in spec and os.path.isfile(spec["path"]):
+        return spec["path"]
+    # Fallback: search in MODEL_ROOTS
     filename = spec["file"]
     for root in MODEL_ROOTS:
         path = os.path.join(root, filename)
