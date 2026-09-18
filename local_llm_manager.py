@@ -17,7 +17,7 @@ MODEL_CATALOG = {
         "path": "C:\\Users\\Peppuz\\.lmstudio\\models\\bartowski\\nvidia_Nemotron-Cascade-2-30B-A3B-GGUF\\nvidia_Nemotron-Cascade-2-30B-A3B-Q4_0.gguf",
         "alias": "Nemotron Cascade 2",
         "label": "Nemotron Cascade 2 — Qualità",
-        "cuda": ["CUDA0", "CUDA1"],
+        "cuda": ["Vulkan0", "Vulkan1"],
         "ctx": 32768,
     },
     "qwen3.5-35b-a3b": {
@@ -25,7 +25,7 @@ MODEL_CATALOG = {
         "path": "C:\\Users\\Peppuz\\.lmstudio\\models\\unsloth\\Qwen3.5-35B-A3B-GGUF\\Qwen3.5-35B-A3B-Q4_K_M.gguf",
         "alias": "Qwen 3.5",
         "label": "Qwen 3.5 — Ragionamento",
-        "cuda": ["CUDA0", "CUDA1"],
+        "cuda": ["Vulkan0", "Vulkan1"],
         "ctx": 65536,
     },
     "mellum2-12b-a2.5b": {
@@ -33,7 +33,7 @@ MODEL_CATALOG = {
         "path": "C:\\Users\\Peppuz\\.lmstudio\\models\\JetBrains\\Mellum2-12B-A2.5B-Thinking-GGUF-Q4_K_M\\Mellum2-12B-A2.5B-Thinking-Q4_K_M.gguf",
         "alias": "Mellum 2",
         "label": "Mellum 2 — Codice e velocità",
-        "cuda": ["CUDA0"],
+        "cuda": ["Vulkan0"],
         "ctx": 131072,
     },
     "gemma-4-e4b": {
@@ -41,7 +41,7 @@ MODEL_CATALOG = {
         "path": "C:\\Users\\Peppuz\\.lmstudio\\models\\HauhauCS\\Gemma-4-E4B-Uncensored-HauhauCS-Aggressive\\Gemma-4-E4B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf",
         "alias": "Gemma 4 E4B",
         "label": "Gemma 4 E4B — Leggero",
-        "cuda": ["CUDA0"],
+        "cuda": ["Vulkan0"],
         "ctx": None,
     },
     "qwen3.6-35b-a3b-uncensored": {
@@ -49,7 +49,7 @@ MODEL_CATALOG = {
         "path": "D:\\Models\\Qwen3.6-35B-A3B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf",
         "alias": "Qwen 3.6 Uncensored",
         "label": "Qwen 3.6 Uncensored — Benchmark",
-        "cuda": ["CUDA0", "CUDA1"],
+        "cuda": ["Vulkan0", "Vulkan1"],
         "ctx": 32768,
     },
     "ornith-1.5-35b-a3b": {
@@ -57,7 +57,7 @@ MODEL_CATALOG = {
         "path": "D:\\Models\\Ornith-1.5-35B-Q4_K_M.gguf",
         "alias": "Ornith 1.5",
         "label": "Ornith 1.5 — Benchmark",
-        "cuda": ["CUDA0", "CUDA1"],
+        "cuda": ["Vulkan0", "Vulkan1"],
         "ctx": 32768,
     },
     "qwen3.8-27b-gsq-rco": {
@@ -65,7 +65,7 @@ MODEL_CATALOG = {
         "path": "D:\\Models\\Qwen3.8-27B-GSQ-RCO-IQ2_XS.gguf",
         "alias": "Qwen 3.8 GSQ",
         "label": "Qwen 3.8 GSQ — Compatto",
-        "cuda": ["CUDA0"],
+        "cuda": ["Vulkan0"],
         "ctx": 32768,
     },
 }
