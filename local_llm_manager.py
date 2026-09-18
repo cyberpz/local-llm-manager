@@ -46,7 +46,7 @@ MODEL_CATALOG = {
     },
 }
 
-LLAMA_SERVER = "C:\\Users\\Peppuz\\llama-server.exe"
+LLAMA_SERVER = "C:\\Users\\Peppuz\\.lmstudio\\extensions\\backends\\llama.cpp-win-x86_64-nvidia-cuda12-avx2-2.37.0\\llama-server.exe"
 STATE_FILE = "C:\\Users\\Peppuz\\local-llm-manager-state.json"
 LOG_FILE = "C:\\Users\\Peppuz\\local-llm-manager.log"
 ERROR_LOG_FILE = "C:\\Users\\Peppuz\\local-llm-manager-error.log"
