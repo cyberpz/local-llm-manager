@@ -241,12 +241,19 @@ def start_llama_server(model_path, ctx_size, cuda_devices):
         "--repeat-penalty", "1.1",
     ]
     log(f"Starting: {' '.join(cmd)}")
+    
+    # Set environment with llama-server directory in PATH for CUDA DLLs
+    env = os.environ.copy()
+    llama_dir = os.path.dirname(LLAMA_SERVER)
+    env["PATH"] = llama_dir + ";" + env.get("PATH", "")
+    
     try:
         proc = subprocess.Popen(
             cmd,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            creationflags=subprocess.CREATE_NO_WINDOW
+            creationflags=subprocess.CREATE_NO_WINDOW,
+            env=env
         )
         return proc.pid
     except Exception as e:
