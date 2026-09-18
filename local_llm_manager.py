@@ -242,10 +242,11 @@ def start_llama_server(model_path, ctx_size, cuda_devices):
     ]
     log(f"Starting: {' '.join(cmd)}")
     
-    # Set environment with llama-server directory in PATH for CUDA DLLs
+    # Set environment with llama-server directory and CUDA DLLs in PATH
     env = os.environ.copy()
     llama_dir = os.path.dirname(LLAMA_SERVER)
-    env["PATH"] = llama_dir + ";" + env.get("PATH", "")
+    cuda_dll_dir = r"C:\Users\Peppuz\.lmstudio\extensions\backends\vendor\win-llama-cuda12-vendor-v2"
+    env["PATH"] = llama_dir + ";" + cuda_dll_dir + ";" + env.get("PATH", "")
     
     try:
         proc = subprocess.Popen(
