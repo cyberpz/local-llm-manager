@@ -70,7 +70,7 @@ MODEL_CATALOG = {
     },
 }
 
-LLAMA_SERVER = "C:\\Users\\Peppuz\\.lmstudio\\extensions\\backends\\llama.cpp-win-x86_64-nvidia-cuda12-avx2-2.37.0\\llama-server.exe"
+LLAMA_SERVER = "C:\\Users\\Peppuz\\AppData\\Local\\Microsoft\\WindowsApps\\llama.exe"
 STATE_FILE = "C:\\Users\\Peppuz\\local-llm-manager-state.json"
 LOG_FILE = "C:\\Users\\Peppuz\\local-llm-manager.log"
 ERROR_LOG_FILE = "C:\\Users\\Peppuz\\local-llm-manager-error.log"
@@ -228,6 +228,7 @@ def start_llama_server(model_path, ctx_size, cuda_devices):
     cuda_str = ",".join(cuda_devices)
     cmd = [
         LLAMA_SERVER,
+        "serve",
         "-m", model_path,
         "-c", str(ctx_size),
         "--host", "127.0.0.1",
