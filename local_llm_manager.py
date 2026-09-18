@@ -44,6 +44,30 @@ MODEL_CATALOG = {
         "cuda": ["CUDA0"],
         "ctx": None,
     },
+    "qwen3.6-35b-a3b-uncensored": {
+        "file": "Qwen3.6-35B-A3B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf",
+        "path": "D:\\Models\\Qwen3.6-35B-A3B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf",
+        "alias": "Qwen 3.6 Uncensored",
+        "label": "Qwen 3.6 Uncensored — Benchmark",
+        "cuda": ["CUDA0", "CUDA1"],
+        "ctx": 32768,
+    },
+    "ornith-1.5-35b-a3b": {
+        "file": "Ornith-1.5-35B-Q4_K_M.gguf",
+        "path": "D:\\Models\\Ornith-1.5-35B-Q4_K_M.gguf",
+        "alias": "Ornith 1.5",
+        "label": "Ornith 1.5 — Benchmark",
+        "cuda": ["CUDA0", "CUDA1"],
+        "ctx": 32768,
+    },
+    "qwen3.8-27b-gsq-rco": {
+        "file": "Qwen3.8-27B-GSQ-RCO-IQ2_XS.gguf",
+        "path": "D:\\Models\\Qwen3.8-27B-GSQ-RCO-IQ2_XS.gguf",
+        "alias": "Qwen 3.8 GSQ",
+        "label": "Qwen 3.8 GSQ — Compatto",
+        "cuda": ["CUDA0"],
+        "ctx": 32768,
+    },
 }
 
 LLAMA_SERVER = "C:\\Users\\Peppuz\\.lmstudio\\extensions\\backends\\llama.cpp-win-x86_64-nvidia-cuda12-avx2-2.37.0\\llama-server.exe"
