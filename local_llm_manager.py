@@ -924,12 +924,18 @@ def restore_runtime_state():
                 alias = spec.get("alias")
                 break
         pids = find_llama_pids()
+        saved_for_ctx = load_state() or {}
         with state_lock:
             state["state"] = "ready"
             state["model_id"] = model_id
             state["alias"] = alias
             state["pid"] = pids[0] if pids else None
             state["error"] = None
+            # Adozione: il ctx effettivo vive solo nel file di stato — non azzerarlo
+            if state.get("effective_ctx") is None:
+                state["effective_ctx"] = saved_for_ctx.get("effective_ctx")
+            if state.get("requested_ctx") is None:
+                state["requested_ctx"] = saved_for_ctx.get("requested_ctx")
             state["updated_at"] = time.time()
         save_state()
         log(f"Restore: llama server found running, model={model_id or alias}, pid={state['pid']}")
