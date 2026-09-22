@@ -1,6 +1,8 @@
 """
-Local LLM Manager v3 — request-driven model loader with queue.
-Transparent OpenAI-compatible proxy on port 1235, forwards to llama-server on 1234.
+Local LLM Manager v3.1 — request-driven model loader with queue.
+Public OpenAI-compatible port 1234: exposes the FULL catalog at /v1/models even when
+no model is resident in VRAM, and loads the requested model on demand.
+Admin/back-compat listener on 1235 (autossh tunnel target). Internal llama.cpp on 1236.
 No manual /switch endpoint — models load automatically based on request's model field.
 """
 import http.server
@@ -103,8 +105,13 @@ STATE_FILE = os.path.join(BASE_DIR, "local-llm-manager-state.json")
 LOG_FILE = os.path.join(BASE_DIR, "local-llm-manager.log")
 ERROR_LOG_FILE = os.path.join(BASE_DIR, "local-llm-manager-error.log")
 API_KEY = "giorgio-local-manager"
-PROXY_PORT = 1235
-LLAMA_PORT = 1234
+# v3.1 port layout: the manager owns the public OpenAI port, so the whole catalog is
+# visible (and loadable on demand) even with nothing resident in VRAM.
+PUBLIC_PORT = 1234        # public OpenAI-compatible port (v3: llama squatted here)
+ADMIN_PORT = 1235         # admin/back-compat listener (autossh tunnel target)
+LLAMA_PORT = 1236         # internal llama.cpp server port
+LEGACY_LLAMA_PORT = 1234  # v3 layout: an orphan llama may still hold the public port
+PROXY_PORT = PUBLIC_PORT  # back-compat alias
 HEALTH_INTERVAL = 10  # seconds between health checks
 
 CTX_LADDER = [512000, 256000, 131072, 65536, 32768, 16384, 8192]
@@ -120,6 +127,7 @@ state = {
     "last_switch": None,
     "pid": None,
     "queue_size": 0,
+    "ports": {"public": PUBLIC_PORT, "admin": ADMIN_PORT, "llama": LLAMA_PORT},
 }
 state_lock = threading.Lock()
 
@@ -252,6 +260,62 @@ def kill_llama_process():
         log_error(f"Port {LLAMA_PORT} still busy after kill attempts")
         return False
     return True
+
+
+def port_busy(port):
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=1):
+            return True
+    except OSError:
+        return False
+
+
+def free_public_port():
+    """v3 layout left a llama.exe bound to the public port. Reclaim it before binding."""
+    if not port_busy(LEGACY_LLAMA_PORT):
+        return True
+    log(f"Port {LEGACY_LLAMA_PORT} busy (legacy llama layout) — reclaiming for the public proxy")
+    kill_llama_process()
+    for _ in range(60):
+        if not port_busy(LEGACY_LLAMA_PORT):
+            log(f"Port {LEGACY_LLAMA_PORT} reclaimed")
+            return True
+        time.sleep(1)
+    log_error(f"Port {LEGACY_LLAMA_PORT} still busy — public proxy may fail to bind")
+    return False
+
+
+def model_status(mid):
+    """idle | loading | ready | error | missing — from live state, not from VRAM."""
+    if find_model_file(mid) is None:
+        return "missing"
+    with state_lock:
+        cur = state.get("model_id")
+        st = state.get("state")
+    if cur == mid and st in ("loading", "ready", "error"):
+        return st
+    return "idle"
+
+
+def build_model_entry(mid):
+    """Catalog entry served at /v1/models whether or not the model is resident."""
+    spec = MODEL_CATALOG[mid]
+    status = model_status(mid)
+    return {
+        "id": mid,
+        "object": "model",
+        "created": int(time.time()),
+        "owned_by": "local",
+        "alias": spec["alias"],
+        "label": spec["label"],
+        "cuda": spec["cuda"],
+        "ctx": spec["ctx"],
+        "file": spec["file"],
+        "available": status != "missing",
+        "status": status,
+        "loaded": status in ("loading", "ready"),
+        "load_on_demand": True,
+    }
 
 
 def check_llama_health(timeout=5, expected_alias=None):
@@ -671,22 +735,21 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
             with state_lock:
                 self.send_json(state)
         elif path == "/v1/models":
-            # Return all models from catalog
-            models = []
-            for mid, spec in MODEL_CATALOG.items():
-                models.append({
-                    "id": mid,
-                    "object": "model",
-                    "created": int(time.time()),
-                    "owned_by": "local",
-                    "alias": spec["alias"],
-                    "label": spec["label"],
-                    "cuda": spec["cuda"],
-                    "ctx": spec["ctx"],
-                    "file": spec["file"],
-                    "available": find_model_file(mid) is not None,
-                })
-            self.send_json({"object": "list", "data": models})
+            # FULL catalog, always — resident or not. Not authed: discovery must work
+            # before anything is loaded (AIProxy/Hermes probe this at startup).
+            self.send_json({
+                "object": "list",
+                "data": [build_model_entry(mid) for mid in MODEL_CATALOG],
+            })
+        elif path.startswith("/v1/models/"):
+            mid = urllib.parse.unquote(path[len("/v1/models/"):])
+            if mid not in MODEL_CATALOG:
+                self.send_json({
+                    "error": {"message": f"Unknown model: {mid}",
+                              "type": "invalid_request_error", "code": "model_not_found"}
+                }, 404)
+            else:
+                self.send_json(build_model_entry(mid))
         else:
             # Pass through to llama-server
             if not self.check_auth():
@@ -939,7 +1002,8 @@ class ThreadedHTTPServer(http.server.ThreadingHTTPServer):
 
 
 def main():
-    log("Local LLM Manager v3 starting")
+    log("Local LLM Manager v3.1 starting")
+    log(f"Ports: public={PUBLIC_PORT} admin={ADMIN_PORT} llama={LLAMA_PORT}")
     log(f"Model roots: {MODEL_ROOTS}")
     cleanup_old_logs()
 
@@ -950,6 +1014,7 @@ def main():
         else:
             log(f"  [MISSING] {spec['alias']}: {spec['file']} NOT FOUND")
 
+    free_public_port()
     restore_runtime_state()
 
     # Start request worker thread
@@ -962,8 +1027,13 @@ def main():
     monitor_thread.start()
     log(f"Health monitor started (interval={HEALTH_INTERVAL}s)")
 
-    server = ThreadedHTTPServer(("0.0.0.0", PROXY_PORT), ProxyHandler)
-    log(f"Proxy server listening on port {PROXY_PORT}")
+    server = ThreadedHTTPServer(("0.0.0.0", PUBLIC_PORT), ProxyHandler)
+    log(f"Proxy server listening on port {PUBLIC_PORT} (public — full catalog, load on demand)")
+
+    # Admin / back-compat listener (autossh tunnel target), same handler, own thread.
+    admin_server = ThreadedHTTPServer(("0.0.0.0", ADMIN_PORT), ProxyHandler)
+    log(f"Admin listener on port {ADMIN_PORT}")
+    threading.Thread(target=admin_server.serve_forever, daemon=True).start()
 
     try:
         server.serve_forever()
