@@ -55,7 +55,9 @@ MODEL_CATALOG = {
         "path": "D:\\Models\\lmstudio\\HauhauCS\\Gemma-4-E4B-Uncensored-HauhauCS-Aggressive\\Gemma-4-E4B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf",
         "alias": "Gemma 4 E4B",
         "label": "Gemma 4 E4B — Leggero",
-        "cuda": ["Vulkan0"],
+        # single-GPU: lo split su 2 schede costa traffico e non dà nulla (misurato: -7..-12% tg)
+        # Vulkan1 perché è la scheda pulita (12.1 GB liberi vs 11.1 su Vulkan0, che porta il desktop)
+        "cuda": ["Vulkan1"],
         "ctx": 131072,
     },
     "qwen3.6-35b-a3b-uncensored": {
@@ -87,7 +89,7 @@ MODEL_CATALOG = {
         "path": "D:\\Models\\MiniCPM5-2B-heretic-abliterated-Q8_0.gguf",
         "alias": "MiniCPM Q8",
         "label": "MiniCPM Q8",
-        "cuda": ["Vulkan0"],
+        "cuda": ["Vulkan1"],
         "ctx": 131072,
     },
     "Spark-X2.5-4B-Q8": {
@@ -97,6 +99,9 @@ MODEL_CATALOG = {
         "label": "Spark-X2.5-4B-Q8_0",
         "cuda": ["Vulkan0", "Vulkan1"],
         "ctx": 131072,
+        # Il file è integro ma llama.cpp non conosce l'architettura 'spark2_5':
+        # ogni tentativo bruciava l'intera ctx ladder (47 volte il 21/09). Disabilitato.
+        "unsupported": "unknown model architecture: 'spark2_5' (llama.cpp build f04801018/10078)",
     },
 }
 
@@ -287,7 +292,10 @@ def free_public_port():
 
 
 def model_status(mid):
-    """idle | loading | ready | error | missing — from live state, not from VRAM."""
+    """idle | loading | ready | error | missing | unsupported — from live state, not VRAM."""
+    spec = MODEL_CATALOG.get(mid, {})
+    if spec.get("unsupported"):
+        return "unsupported"
     if find_model_file(mid) is None:
         return "missing"
     with state_lock:
@@ -312,10 +320,11 @@ def build_model_entry(mid):
         "cuda": spec["cuda"],
         "ctx": spec["ctx"],
         "file": spec["file"],
-        "available": status != "missing",
+        "available": status not in ("missing", "unsupported"),
         "status": status,
         "loaded": status in ("loading", "ready"),
-        "load_on_demand": True,
+        "load_on_demand": status not in ("missing", "unsupported"),
+        "unsupported_reason": spec.get("unsupported"),
     }
 
 
@@ -801,6 +810,13 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
             
             if model_id not in MODEL_CATALOG:
                 self.send_json({"error": f"Unknown model: {model_id}"}, 400)
+                return
+
+            if MODEL_CATALOG[model_id].get("unsupported"):
+                self.send_json({
+                    "error": f"Model {model_id} is not loadable with this llama.cpp build: "
+                             f"{MODEL_CATALOG[model_id]['unsupported']}"
+                }, 400)
                 return
             
             is_streaming = data.get("stream", False)
