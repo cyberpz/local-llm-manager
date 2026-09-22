@@ -1,9 +1,10 @@
 """
-Local LLM Manager v3.1 — request-driven model loader with queue.
+Local LLM Manager v3.2 — request-driven model loader with queue.
 Public OpenAI-compatible port 1234: exposes the FULL catalog at /v1/models even when
 no model is resident in VRAM, and loads the requested model on demand.
 Admin/back-compat listener on 1235 (autossh tunnel target). Internal llama.cpp on 1236.
 No manual /switch endpoint — models load automatically based on request's model field.
+v3.2: never declare a launch dead from the pid alone (WindowsApps alias stub exits early).
 """
 import http.server
 import http.client
@@ -356,12 +357,21 @@ def proc_alive(pid):
 
 def wait_for_llama_ready(timeout=180, pid=None, expected_alias=None):
     start = time.time()
+    stub_died_logged = False
     while time.time() - start < timeout:
         if check_llama_health(expected_alias=expected_alias):
             return True
         if pid and not proc_alive(pid):
-            log(f"  server pid {pid} exited before ready (ctx too large / crash)")
-            return False
+            # The WindowsApps alias stub can exit while the real llama.exe keeps loading.
+            # Only treat it as a crash when NO llama process is alive at all — otherwise
+            # every ctx rung gets declared dead and the ladder walks down for nothing.
+            if find_llama_pids():
+                if not stub_died_logged:
+                    log(f"  launcher pid {pid} gone but llama.exe still alive — continuing to wait")
+                    stub_died_logged = True
+            else:
+                log(f"  server pid {pid} exited before ready (ctx too large / crash)")
+                return False
         time.sleep(1)
     return False
 
@@ -1002,7 +1012,7 @@ class ThreadedHTTPServer(http.server.ThreadingHTTPServer):
 
 
 def main():
-    log("Local LLM Manager v3.1 starting")
+    log("Local LLM Manager v3.2 starting")
     log(f"Ports: public={PUBLIC_PORT} admin={ADMIN_PORT} llama={LLAMA_PORT}")
     log(f"Model roots: {MODEL_ROOTS}")
     cleanup_old_logs()
