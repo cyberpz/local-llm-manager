@@ -42,12 +42,14 @@ MODEL_CATALOG = {
         "cuda": ["Vulkan0", "Vulkan1"],
         "ctx": 131072,
     },
+    # 1 scheda sola: Vulkan0 = scheda fisica 1 (pulita, nvidia-smi index 1).
+    # A 131072: 98,3 tok/s single vs 85,6 split (+15%), 8328 MiB usati, scheda 0 intera libera.
     "mellum2-12b-a2.5b": {
         "file": "Mellum2-12B-A2.5B-Thinking-Q4_K_M.gguf",
         "path": "D:\\Models\\lmstudio\\JetBrains\\Mellum2-12B-A2.5B-Thinking-GGUF-Q4_K_M\\Mellum2-12B-A2.5B-Thinking-Q4_K_M.gguf",
         "alias": "Mellum 2",
         "label": "Mellum 2 — Codice e velocità",
-        "cuda": ["Vulkan0", "Vulkan1"],
+        "cuda": ["Vulkan0"],
         "ctx": 131072,
     },
     "gemma-4-e4b": {
