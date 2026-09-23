@@ -207,6 +207,71 @@ def score_response(prompt_data, result):
     return min(score, 100)
 
 
+def benchmark_model_direct(model_name, prompts=None):
+    """Run benchmark directly on active model (bypass selector)."""
+    if prompts is None:
+        prompts = PROMPTS
+
+    print(f"\n{'='*60}")
+    print(f"  Benchmarking: {model_name}")
+    print(f"{'='*60}")
+
+    # Wait for llama-server
+    if not wait_for_llama():
+        print("  ERROR: llama-server not ready")
+        return None
+
+    print(f"  Model active on port 1234")
+
+    results = []
+    for p in prompts:
+        print(f"\n  [{p['category']}] {p['id']}...", end=" ", flush=True)
+        result = run_prompt(p)
+
+        if result.get("error"):
+            print(f"ERROR: {result['error']}")
+        else:
+            score = score_response(p, result)
+            result["score"] = score
+            print(f"OK | {result['tokens']} tok | {result['tokens_per_sec']} t/s | TTFT {result['ttft']}s | score {score}")
+
+        result["prompt_id"] = p["id"]
+        result["category"] = p["category"]
+        result["weight"] = p.get("weight", 1.0)
+        results.append(result)
+
+    # Summary
+    valid = [r for r in results if not r.get("error")]
+    if not valid:
+        print(f"\n  All prompts failed for {model_name}")
+        return {"model": {"alias": model_name, "id": model_name}, "results": results, "summary": None}
+
+    avg_tps = statistics.mean(r["tokens_per_sec"] for r in valid)
+    avg_ttft = statistics.mean(r["ttft"] for r in valid if r["ttft"])
+    avg_score = statistics.mean(r["score"] for r in valid)
+    weighted_score = sum(r["score"] * r["weight"] for r in valid) / sum(r["weight"] for r in valid)
+
+    summary = {
+        "avg_tokens_per_sec": round(avg_tps, 2),
+        "avg_ttft_sec": round(avg_ttft, 3),
+        "avg_score": round(avg_score, 1),
+        "weighted_score": round(weighted_score, 1),
+        "total_tokens": sum(r["tokens"] for r in valid),
+        "prompts_ok": len(valid),
+        "prompts_failed": len(results) - len(valid),
+    }
+
+    print(f"\n  {'─'*50}")
+    print(f"  SUMMARY: {model_name}")
+    print(f"    Speed:       {avg_tps:.1f} tok/s avg")
+    print(f"    TTFT:        {avg_ttft:.3f}s avg")
+    print(f"    Score:       {avg_score:.1f}/100 avg")
+    print(f"    Weighted:    {weighted_score:.1f}/100")
+    print(f"    Prompts:     {len(valid)}/{len(results)} OK")
+
+    return {"model": {"alias": model_name, "id": model_name}, "results": results, "summary": summary}
+
+
 def benchmark_model(model, prompts=None):
     """Run full benchmark on a model."""
     if prompts is None:
@@ -305,34 +370,54 @@ def print_comparison(all_results):
 
 def main():
     parser = argparse.ArgumentParser(description="Local LLM Benchmark")
-    parser.add_argument("--models", default="new", help="Comma-separated model IDs, 'all', or 'new' (Qwen3.6+Ornith)")
+    parser.add_argument("--models", default="new", help="Comma-separated model IDs, 'all', 'new', or 'direct' (bypass selector)")
     parser.add_argument("--output", default="benchmark_results.json", help="Output JSON file")
     args = parser.parse_args()
+
+    if args.models == "direct":
+        # Direct benchmark without selector - skip get_available_models()
+        model_name = "Qwen3.8-27B-GSQ-RCO-IQ2_XS"
+        print(f"Direct benchmark: {model_name}")
+        result = benchmark_model_direct(model_name)
+        all_results = [result] if result else []
+        print_comparison(all_results)
+        
+        with open(args.output, "w") as f:
+            json.dump({"timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "results": all_results}, f, indent=2)
+        print(f"\nResults saved to {args.output}")
+        return
 
     available = get_available_models()
     print(f"Available models: {[m['alias'] for m in available]}")
 
     if args.models == "all":
         targets = available
+        print(f"Benchmarking: {[m['alias'] for m in targets]}")
+        all_results = []
+        for model in targets:
+            result = benchmark_model(model)
+            all_results.append(result)
     elif args.models == "new":
         targets = [m for m in available if "qwen3.6" in m["id"] or "ornith" in m["id"]]
         if not targets:
-            print("New models not yet available. Run with --models all")
+            print("New models not yet available. Run with --models all or --models direct")
             sys.exit(1)
+        print(f"Benchmarking: {[m['alias'] for m in targets]}")
+        all_results = []
+        for model in targets:
+            result = benchmark_model(model)
+            all_results.append(result)
     else:
         ids = [x.strip() for x in args.models.split(",")]
         targets = [m for m in available if m["id"] in ids]
-
-    if not targets:
-        print("No target models found.")
-        sys.exit(1)
-
-    print(f"Benchmarking: {[m['alias'] for m in targets]}")
-
-    all_results = []
-    for model in targets:
-        result = benchmark_model(model)
-        all_results.append(result)
+        if not targets:
+            print("No target models found.")
+            sys.exit(1)
+        print(f"Benchmarking: {[m['alias'] for m in targets]}")
+        all_results = []
+        for model in targets:
+            result = benchmark_model(model)
+            all_results.append(result)
 
     print_comparison(all_results)
 

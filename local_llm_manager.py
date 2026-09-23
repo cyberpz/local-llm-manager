@@ -1,5 +1,5 @@
 """
-Local LLM Manager v3.2 — request-driven model loader with queue.
+Local LLM Manager v3.3 — request-driven model loader with queue.
 Public OpenAI-compatible port 1234: exposes the FULL catalog at /v1/models even when
 no model is resident in VRAM, and loads the requested model on demand.
 Admin/back-compat listener on 1235 (autossh tunnel target). Internal llama.cpp on 1236.
@@ -106,10 +106,18 @@ MODEL_CATALOG = {
 }
 
 LLAMA_SERVER = r"C:\Users\Peppuz\AppData\Local\Microsoft\WindowsApps\llama.exe"
-BASE_DIR = r"C:\Users\Peppuz"
-STATE_FILE = os.path.join(BASE_DIR, "local-llm-manager-state.json")
-LOG_FILE = os.path.join(BASE_DIR, "local-llm-manager.log")
-ERROR_LOG_FILE = os.path.join(BASE_DIR, "local-llm-manager-error.log")
+# v3.3: tutto il runtime vive in una cartella sola (sotto git), non sparpagliato nella home
+BASE_DIR = r"C:\Users\Peppuz\masterbeef-llm"
+LOG_DIR = os.path.join(BASE_DIR, "logs")
+STATE_DIR = os.path.join(BASE_DIR, "state")
+STATE_FILE = os.path.join(STATE_DIR, "local-llm-manager-state.json")
+LOG_FILE = os.path.join(LOG_DIR, "local-llm-manager.log")
+ERROR_LOG_FILE = os.path.join(LOG_DIR, "local-llm-manager-error.log")
+for _d in (LOG_DIR, STATE_DIR):
+    try:
+        os.makedirs(_d, exist_ok=True)
+    except OSError:
+        pass
 API_KEY = "giorgio-local-manager"
 # v3.1 port layout: the manager owns the public OpenAI port, so the whole catalog is
 # visible (and loadable on demand) even with nothing resident in VRAM.
@@ -404,7 +412,7 @@ def start_llama_server(model_path, ctx_size, cuda_devices, alias=None):
     ]
     if alias:
         cmd += ["--alias", alias]
-    log_path = os.path.join(BASE_DIR, f"llama-server-{int(time.time())}.log")
+    log_path = os.path.join(LOG_DIR, f"llama-server-{int(time.time())}.log")
     log(f"Starting: {' '.join(cmd)} (log: {log_path})")
 
     env = os.environ.copy()
@@ -434,7 +442,7 @@ def start_llama_server(model_path, ctx_size, cuda_devices, alias=None):
 
 def cleanup_old_logs(keep=5):
     try:
-        logs = [os.path.join(BASE_DIR, f) for f in os.listdir(BASE_DIR)
+        logs = [os.path.join(LOG_DIR, f) for f in os.listdir(LOG_DIR)
                 if f.startswith("llama-server-") and f.endswith(".log")]
         logs.sort(key=os.path.getmtime, reverse=True)
         for old in logs[keep:]:
@@ -1034,7 +1042,7 @@ class ThreadedHTTPServer(http.server.ThreadingHTTPServer):
 
 
 def main():
-    log("Local LLM Manager v3.2 starting")
+    log("Local LLM Manager v3.3 starting")
     log(f"Ports: public={PUBLIC_PORT} admin={ADMIN_PORT} llama={LLAMA_PORT}")
     log(f"Model roots: {MODEL_ROOTS}")
     cleanup_old_logs()

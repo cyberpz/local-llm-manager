@@ -1,0 +1,9 @@
+# runtime locale su MasterBeef — non versionato
+logs/
+state/
+bak/
+__pycache__/
+*.pyc
+*.bak
+*.bak.py
+*.out
