@@ -113,6 +113,19 @@ STATE_DIR = os.path.join(BASE_DIR, "state")
 STATE_FILE = os.path.join(STATE_DIR, "local-llm-manager-state.json")
 LOG_FILE = os.path.join(LOG_DIR, "local-llm-manager.log")
 ERROR_LOG_FILE = os.path.join(LOG_DIR, "local-llm-manager-error.log")
+HOP_BY_HOP = frozenset([
+    "connection",
+    "keep-alive",
+    "transfer-encoding",
+    "content-length",
+    "server",
+    "date",
+    "proxy-authenticate",
+    "proxy-authorization",
+    "te",
+    "trailer",
+    "upgrade",
+])
 for _d in (LOG_DIR, STATE_DIR):
     try:
         os.makedirs(_d, exist_ok=True)
@@ -724,6 +737,7 @@ def request_worker():
 
 
 class ProxyHandler(http.server.BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
     def log_message(self, format, *args):
         pass  # Suppress default logging
 
@@ -786,7 +800,7 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
             response = forward_to_llama("GET", self.path, self.headers, None)
             self.send_response(response["status"])
             for key, value in response["headers"].items():
-                if key.lower() not in ('transfer-encoding', 'connection'):
+                if key.lower() not in HOP_BY_HOP:
                     self.send_header(key, value)
             self.send_header("Content-Length", str(len(response["body"])))
             self.end_headers()
@@ -858,7 +872,7 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
                 # Streaming response - forward chunks from upstream
                 self.send_response(response_result["status"])
                 for key, value in response_result["headers"].items():
-                    if key.lower() not in ('transfer-encoding', 'connection'):
+                    if key.lower() not in HOP_BY_HOP:
                         self.send_header(key, value)
                 self.send_header("Transfer-Encoding", "chunked")
                 self.end_headers()
@@ -892,7 +906,7 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
                 # Non-streaming response
                 self.send_response(response_result["status"])
                 for key, value in response_result["headers"].items():
-                    if key.lower() not in ('transfer-encoding', 'connection'):
+                    if key.lower() not in HOP_BY_HOP:
                         self.send_header(key, value)
                 self.send_header("Content-Length", str(len(response_result["body"])))
                 self.end_headers()
@@ -903,7 +917,7 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
             response = forward_to_llama("POST", self.path, self.headers, body)
             self.send_response(response["status"])
             for key, value in response["headers"].items():
-                if key.lower() not in ('transfer-encoding', 'connection'):
+                if key.lower() not in HOP_BY_HOP:
                     self.send_header(key, value)
             self.send_header("Content-Length", str(len(response["body"])))
             self.end_headers()
