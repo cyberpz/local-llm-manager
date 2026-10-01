@@ -8,7 +8,7 @@ import argparse, json, time, urllib.request, sys, statistics, os
 
 MANAGER_URL = "http://localhost:1235"
 LLAMA_URL = "http://localhost:1234"
-API_KEY = "giorgio-local-manager"
+API_KEY = "pz-local-manager"
 
 # Benchmark prompts covering different capabilities
 PROMPTS = [

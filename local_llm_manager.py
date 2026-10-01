@@ -133,7 +133,7 @@ for _d in (LOG_DIR, STATE_DIR):
         os.makedirs(_d, exist_ok=True)
     except OSError:
         pass
-API_KEY = "giorgio-local-manager"
+API_KEY = "pz-local-manager"
 # v3.1 port layout: the manager owns the public OpenAI port, so the whole catalog is
 # visible (and loadable on demand) even with nothing resident in VRAM.
 PUBLIC_PORT = 1234        # public OpenAI-compatible port (v3: llama squatted here)

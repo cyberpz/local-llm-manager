@@ -23,7 +23,7 @@ bak/                     backup delle versioni precedenti                     (n
 | 1235 | ADMIN / back-compat — stesso handler, target del tunnel autossh verso la VPS (AIProxy) |
 | 1236 | interno — llama.cpp (`llama.exe serve`) |
 
-`/v1/chat/completions` richiede `Authorization: Bearer giorgio-local-manager`.
+`/v1/chat/completions` richiede `Authorization: Bearer pz-local-manager`.
 `/v1/models`, `/v1/models/{id}`, `/health`, `/status` sono aperti (discovery prima del load).
 
 Per ogni modello: `status` = `idle | loading | ready | error | missing | unsupported`,

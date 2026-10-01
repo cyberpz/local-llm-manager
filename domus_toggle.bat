@@ -25,7 +25,7 @@ echo       EarDaemon: %ESTATUS%
 :: === WARMUP LLM ===
 echo.
 echo [WARMUP] Caricamento modello LLM in GPU...
-powershell -Command "try { $null = Invoke-RestMethod -Uri 'http://localhost:1234/v1/chat/completions' -Method Post -ContentType 'application/json' -Headers @{Authorization='Bearer giorgio-local-manager'} -Body '{\"model\":\"mellum2-12b-a2.5b\",\"messages\":[{\"role\":\"user\",\"content\":\"Ciao\"}],\"max_tokens\":5}' -TimeoutSec 180; Write-Host '       LLM: OK' } catch { Write-Host '       LLM: timeout o errore' }"
+powershell -Command "try { $null = Invoke-RestMethod -Uri 'http://localhost:1234/v1/chat/completions' -Method Post -ContentType 'application/json' -Headers @{Authorization='Bearer pz-local-manager'} -Body '{\"model\":\"mellum2-12b-a2.5b\",\"messages\":[{\"role\":\"user\",\"content\":\"Ciao\"}],\"max_tokens\":5}' -TimeoutSec 180; Write-Host '       LLM: OK' } catch { Write-Host '       LLM: timeout o errore' }"
 
 :: === ATTESA STT ===
 echo [WARMUP] Attesa caricamento modello STT...
